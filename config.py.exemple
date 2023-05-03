@@ -1,0 +1,15 @@
+# Channel d'écoute
+listening_channel = 000000000000000000
+                    
+
+# Utilisateur qui exécute les commandes
+execute_user = 000000000000000000
+
+# Commentateur : 
+# # Si le message débute par cette chaine de caractère alors la commande n'est pas exécuté
+# Il est possible de la changer et de mettre ? comment )))))))))))))).
+# Pour désactiver laisser un espace dans le string (commentaire = " ")
+commentaire = "//"
+
+
+TOKEN="HERE"

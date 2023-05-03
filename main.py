@@ -1,26 +1,61 @@
 import discord
+from discord.ext import commands
 import subprocess
 
-client = discord.Client()
+from config import listening_channel, execute_user, commentaire, TOKEN
 
-CHANNEL_ID = 123456789 # Remplacez ce nombre par l'ID du canal où vous souhaitez que votre bot écoute
+# Création des intents permettant la lecture des messages
+intents = discord.Intents.all()
+intents.members = True
+bot = commands.Bot(intents=intents)
 
-@client.event
+# Au lancement
+@bot.event
+async def on_ready():
+    print(f"Et hop je suis en ligne {bot.user}")
+
+
+# A chaque message envoyé
+@bot.event
 async def on_message(message):
-    if message.channel.id == CHANNEL_ID:
-        try:
-            result = subprocess.check_output(message.content, shell=True, stderr=subprocess.STDOUT, timeout=10)
-            result = result.decode("cp1252", errors="ignore").strip()
-            if len(result) > 2000:
-                # Si la sortie est trop longue pour Discord, envoyez-la en plusieurs messages
-                chunks = [result[i:i+1994] for i in range(0, len(result), 1994)]
-                for chunk in chunks:
-                    await message.channel.send(f"```\n{chunk}\n```")
-            else:
-                await message.channel.send(f"```\n{result}\n```")
-        except subprocess.CalledProcessError as e:
-            await message.channel.send(f"La commande a renvoyé une erreur : ```\n{e.output.decode('cp1252').strip()}\n```")
-        except subprocess.TimeoutExpired:
-            await message.channel.send("La commande a pris trop de temps à s'exécuter.")
+    if message.channel.id == listening_channel and message.author.id == execute_user:
+        if message.content:
+            content = message.content
 
-client.run("token")
+
+            # Savoir si c'est un commentaire :
+            debut_msg = content[:int(len(commentaire))]
+            if debut_msg == commentaire:
+                return
+
+            # Définition du channel d'envoi
+            channel = bot.get_channel(listening_channel)
+
+            print("Exécution de : " + content)  
+
+            try:
+            # Exécution de la commande
+                output = subprocess.check_output(content, shell=True, text=True, stderr=subprocess.STDOUT, encoding='cp1252')
+            except subprocess.CalledProcessError as e:
+            # En cas d'erreur, récupération de la sortie d'erreur
+                output = e.output + "\n(Il s'agit d'une erreur d'excution, de commande, ou de synthaxe)"
+                    
+
+            # Récupérer la taille pour savoir si il faut le divisier
+            taille = len(output)
+            if taille <= 1900:
+                await channel.send("```\n" + output + "```")
+            else:
+                while taille > 0:
+                    partie = output[:1900].strip()
+                    output = output[1900:]
+
+                    if partie:
+                        # Envoyer chaque partie en tant que message distinct
+                        await channel.send("```\n" + partie + "```")
+        else:
+            print("Le message ne contient pas de contenu texte.")
+
+
+
+bot.run(TOKEN)
